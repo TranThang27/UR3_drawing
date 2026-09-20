@@ -1,0 +1,170 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 80
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /Robot1
+        - /Target P (green)1
+        - /Actual tool path (orange)1
+      Splitter Ratio: 0.55
+    Tree Height: 650
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Name: Camera Tools
+  - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 35; 35; 35
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Ground grid (XY)
+      Enabled: true
+      Cell Size: 0.1
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Color: 100; 100; 110
+      Alpha: 0.45
+      Plane: XY
+    - Class: rviz_default_plugins/Grid
+      Name: Writing plane (XY)
+      Enabled: true
+      Cell Size: 0.05
+      Plane Cell Count: 12
+      Reference Frame: base_link
+      Color: 70; 110; 150
+      Alpha: 0.35
+      Plane: XY
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.18
+    - Class: rviz_default_plugins/RobotModel
+      Name: Robot
+      Enabled: true
+      Alpha: 1.0
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
+      Visual Enabled: true
+      Collision Enabled: false
+    - Class: rviz_default_plugins/Axes
+      Name: Tool0 axes
+      Enabled: true
+      Reference Frame: tool0
+      Length: 0.12
+      Radius: 0.01
+    - Class: rviz_default_plugins/TF
+      Name: TF frames
+      Enabled: false
+      Frame Timeout: 15
+      Marker Scale: 0.15
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+    - Class: rviz_default_plugins/Path
+      Name: Target circle (green)
+      Enabled: true
+      Topic:
+        Value: /draw_p/target_path
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
+      Color: 30; 255; 80
+      Alpha: 1
+      Buffer Length: 1
+      Line Style: Billboards
+      Line Width: 0.004
+      Pose Style: None
+    - Class: rviz_default_plugins/Path
+      Name: Actual tool path (orange)
+      Enabled: true
+      Topic:
+        Value: /draw_p/actual_path
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
+      Color: 255; 130; 20
+      Alpha: 1
+      Buffer Length: 1
+      Line Style: Billboards
+      Line Width: 0.006
+      Pose Style: None
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 255; 180; 0
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 1.5
+      Enable Stereo Rendering:
+        Value: false
+      Focal Point:
+        X: 0.3
+        Y: 0
+        Z: 0.18
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05
+      Name: Circle front view
+      Near Clip Distance: 0.01
+      Pitch: 1.57
+      Target Frame: base_link
+      Yaw: 0
+      Value: Orbit (rviz)
+    Saved:
+      - Class: rviz_default_plugins/Orbit
+        Distance: 1.0
+        Focal Point:
+          X: 0.3
+          Y: 0
+          Z: 0.18
+        Name: Close circle view
+        Pitch: 1.57
+        Target Frame: base_link
+        Yaw: 0
+        Value: Orbit (rviz)
+      - Class: rviz_default_plugins/Orbit
+        Distance: 1.8
+        Focal Point:
+          X: 0.2
+          Y: 0
+          Z: 0.25
+        Name: Robot overview
+        Pitch: 0.35
+        Target Frame: base_link
+        Yaw: 0.8
+        Value: Orbit (rviz)
+Window Geometry:
+  Displays:
+    collapsed: false
+  Hide Left Dock: false
+  Hide Right Dock: false
+  Views:
+    collapsed: false
+  Camera Tools:
+    collapsed: false
+  Width: 1400
+  Height: 900
