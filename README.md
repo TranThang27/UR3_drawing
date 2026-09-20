@@ -8,14 +8,3 @@ source install/setup.bash
 ros2 launch ur_drawing draw_p.launch.py
 ```
 
-Chạy với tham số tùy chỉnh:
-
-```bash
-ros2 launch ur_drawing draw_p.launch.py radius:=0.08 speed_scale:=0.25
-```
-
-Chỉ xem trước quỹ đạo:
-
-```bash
-ros2 launch ur_drawing draw_p.launch.py execute:=false
-```
