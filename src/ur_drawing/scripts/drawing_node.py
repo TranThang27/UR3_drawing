@@ -22,7 +22,7 @@ class DrawCircle(Node):
             "group_name": "ur_manipulator",
             "x": 0.30,
             "y": -0.08,
-            "z": 0.18,
+            "z": 0.40,
             "radius": 0.08,
             "step": 0.004,
             "speed_scale": 0.25,

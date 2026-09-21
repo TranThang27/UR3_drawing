@@ -46,7 +46,7 @@ Visualization Manager:
       Offset:
         X: 0
         Y: 0
-        Z: 0.18
+        Z: 0.40
     - Class: rviz_default_plugins/RobotModel
       Name: Robot
       Enabled: true
@@ -125,7 +125,7 @@ Visualization Manager:
       Focal Point:
         X: 0.3
         Y: 0
-        Z: 0.18
+        Z: 0.40
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05
       Name: Circle front view
@@ -140,7 +140,7 @@ Visualization Manager:
         Focal Point:
           X: 0.3
           Y: 0
-          Z: 0.18
+          Z: 0.40
         Name: Close circle view
         Pitch: 1.57
         Target Frame: base_link
