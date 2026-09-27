@@ -1,0 +1,152 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="$(arg name)">
+  <xacro:arg name="name" default="ur"/>
+  <xacro:arg name="ur_type" default="ur3e"/>
+  <xacro:arg name="prefix" default=""/>
+  <xacro:arg name="safety_limits" default="true"/>
+  <xacro:arg name="safety_pos_margin" default="0.15"/>
+  <xacro:arg name="safety_k_position" default="20"/>
+  <xacro:arg name="sim_gazebo" default="false"/>
+  <xacro:arg name="sim_ignition" default="false"/>
+  <xacro:arg name="simulation_controllers" default=""/>
+  <xacro:arg name="use_fake_hardware" default="false"/>
+  <xacro:arg name="fake_sensor_commands" default="false"/>
+  <xacro:arg name="headless_mode" default="false"/>
+  <xacro:arg name="robot_ip" default="0.0.0.0"/>
+  <xacro:arg name="script_filename" default=""/>
+  <xacro:arg name="input_recipe_filename" default=""/>
+  <xacro:arg name="output_recipe_filename" default=""/>
+  <!-- Compatibility arguments supplied by ur_moveit.launch.py. -->
+  <xacro:arg name="joint_limit_params" default=""/>
+  <xacro:arg name="kinematics_params" default=""/>
+  <xacro:arg name="physical_params" default=""/>
+  <xacro:arg name="visual_params" default=""/>
+
+  <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+  <xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
+  <xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
+  <xacro:property name="is_sim_gazebo" value="$(arg sim_gazebo)"/>
+  <xacro:property name="is_sim_ignition" value="$(arg sim_ignition)"/>
+  <xacro:property name="is_fake_hardware" value="$(arg use_fake_hardware)"/>
+
+  <link name="world"/>
+  <xacro:if value="${is_sim_gazebo or is_sim_ignition}">
+    <link name="ground_plane">
+      <visual><geometry><box size="5 5 0.001"/></geometry></visual>
+      <collision><geometry><box size="5 5 0.001"/></geometry></collision>
+    </link>
+    <joint name="ground_plane_joint" type="fixed">
+      <parent link="world"/><child link="ground_plane"/>
+      <origin xyz="0 0 -0.01" rpy="0 0 0"/>
+    </joint>
+  </xacro:if>
+
+  <xacro:ur_robot
+    name="$(arg name)"
+    tf_prefix="$(arg prefix)"
+    parent="world"
+    joint_limits_parameters_file="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"
+    kinematics_parameters_file="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"
+    physical_parameters_file="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"
+    visual_parameters_file="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"
+    generate_ros2_control_tag="false"
+    safety_limits="$(arg safety_limits)"
+    safety_pos_margin="$(arg safety_pos_margin)"
+    safety_k_position="$(arg safety_k_position)"
+    use_fake_hardware="$(arg use_fake_hardware)"
+    fake_sensor_commands="$(arg fake_sensor_commands)"
+    sim_gazebo="$(arg sim_gazebo)"
+    sim_ignition="$(arg sim_ignition)"
+    headless_mode="$(arg headless_mode)"
+    robot_ip="$(arg robot_ip)"
+    script_filename="$(arg script_filename)"
+    input_recipe_filename="$(arg input_recipe_filename)"
+    output_recipe_filename="$(arg output_recipe_filename)">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:ur_robot>
+
+  <!-- Official PickNik Robotiq 2F-85 geometry and UR mounting adapter. Its
+       ros2_control tag is disabled because the Fortress simulation is more
+       reliable when arm and gripper share the hardware component below. -->
+  <xacro:ur_to_robotiq
+    prefix=""
+    parent="tool0"
+    child="robotiq_mounting_link"
+    rotation="0.0"/>
+  <xacro:robotiq_gripper
+    name="robotiq_2f_85"
+    prefix=""
+    parent="robotiq_mounting_link"
+    include_ros2_control="false">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:robotiq_gripper>
+
+  <!-- URDF collision/surface tags in the upstream mesh description are not
+       Gazebo extension tags. Set pad friction explicitly for SDF conversion. -->
+  <gazebo reference="robotiq_85_left_finger_tip_link">
+    <mu1>2.0</mu1><mu2>2.0</mu2>
+  </gazebo>
+  <gazebo reference="robotiq_85_right_finger_tip_link">
+    <mu1>2.0</mu1><mu2>2.0</mu2>
+  </gazebo>
+
+  <xacro:macro name="arm_control_joint" params="joint initial">
+    <joint name="${joint}">
+      <command_interface name="position"/>
+      <command_interface name="velocity"/>
+      <state_interface name="position"><param name="initial_value">${initial}</param></state_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="gripper_mimic_joint" params="joint multiplier">
+    <joint name="${joint}">
+      <!-- Physical coupling is maintained by gripper_servo.py using measured
+           joint positions and bounded efforts (Fortress mimic workaround). -->
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- Keep the arm and gripper in one Gazebo hardware component. Older
+       Fortress releases do not reliably write commands to a second system. -->
+  <ros2_control name="ur" type="system">
+    <hardware>
+      <xacro:if value="$(arg sim_ignition)"><plugin>ign_ros2_control/IgnitionSystem</plugin></xacro:if>
+      <xacro:if value="$(arg sim_gazebo)"><plugin>gazebo_ros2_control/GazeboSystem</plugin></xacro:if>
+      <xacro:if value="$(arg use_fake_hardware)"><plugin>mock_components/GenericSystem</plugin></xacro:if>
+      <xacro:unless value="${is_sim_ignition or is_sim_gazebo or is_fake_hardware}"><plugin>mock_components/GenericSystem</plugin></xacro:unless>
+    </hardware>
+    <!-- Ready-to-pick pose: tool0 at the central workspace, gripper downward. -->
+    <xacro:arm_control_joint joint="shoulder_pan_joint" initial="-0.48707"/>
+    <xacro:arm_control_joint joint="shoulder_lift_joint" initial="-1.77750"/>
+    <xacro:arm_control_joint joint="elbow_joint" initial="1.67467"/>
+    <xacro:arm_control_joint joint="wrist_1_joint" initial="-1.46797"/>
+    <xacro:arm_control_joint joint="wrist_2_joint" initial="-1.57080"/>
+    <xacro:arm_control_joint joint="wrist_3_joint" initial="1.08373"/>
+    <joint name="robotiq_85_left_knuckle_joint">
+      <command_interface name="effort"><param name="min">-12.0</param><param name="max">12.0</param></command_interface>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <xacro:gripper_mimic_joint joint="robotiq_85_right_knuckle_joint" multiplier="-1"/>
+    <xacro:gripper_mimic_joint joint="robotiq_85_left_inner_knuckle_joint" multiplier="1"/>
+    <xacro:gripper_mimic_joint joint="robotiq_85_right_inner_knuckle_joint" multiplier="-1"/>
+    <xacro:gripper_mimic_joint joint="robotiq_85_left_finger_tip_joint" multiplier="-1"/>
+    <xacro:gripper_mimic_joint joint="robotiq_85_right_finger_tip_joint" multiplier="1"/>
+  </ros2_control>
+
+  <xacro:if value="$(arg sim_gazebo)">
+    <gazebo><plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control"><parameters>$(arg simulation_controllers)</parameters></plugin></gazebo>
+  </xacro:if>
+  <xacro:if value="$(arg sim_ignition)">
+    <gazebo>
+      <plugin filename="libign_ros2_control-system.so" name="ign_ros2_control::IgnitionROS2ControlPlugin"><parameters>$(arg simulation_controllers)</parameters><controller_manager_node_name>controller_manager</controller_manager_node_name></plugin>
+      <!-- Cubes are held by finger contact. No startup or commanded fixed
+           attachment: action.py verifies the physical lift from Gazebo poses. -->
+    </gazebo>
+  </xacro:if>
+</robot>

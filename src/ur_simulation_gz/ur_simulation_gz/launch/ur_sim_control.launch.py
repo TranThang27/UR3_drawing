@@ -66,6 +66,10 @@ def launch_setup(context, *args, **kwargs):
     launch_rviz = LaunchConfiguration("launch_rviz")
     gazebo_gui = LaunchConfiguration("gazebo_gui")
     world_file = LaunchConfiguration("world_file")
+    robot_x = LaunchConfiguration("robot_x")
+    robot_y = LaunchConfiguration("robot_y")
+    robot_z = LaunchConfiguration("robot_z")
+    robot_yaw = LaunchConfiguration("robot_yaw")
 
     initial_joint_controllers = PathJoinSubstitution(
         [FindPackageShare(runtime_config_package), "config", controllers_file]
@@ -130,7 +134,17 @@ def launch_setup(context, *args, **kwargs):
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+        arguments=[
+            "joint_state_broadcaster",
+            "--controller-manager",
+            "/controller_manager",
+            "--controller-manager-timeout",
+            "120",
+            "--service-call-timeout",
+            "60",
+            "--switch-timeout",
+            "60",
+        ],
     )
 
     # Delay rviz start after `joint_state_broadcaster`
@@ -146,13 +160,83 @@ def launch_setup(context, *args, **kwargs):
     initial_joint_controller_spawner_started = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=[initial_joint_controller, "-c", "/controller_manager"],
-        condition=IfCondition(start_joint_controller),
+        arguments=[
+            initial_joint_controller,
+            "-c",
+            "/controller_manager",
+            "--controller-manager-timeout",
+            "120",
+            "--service-call-timeout",
+            "60",
+            "--switch-timeout",
+            "60",
+        ],
     )
     initial_joint_controller_spawner_stopped = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=[initial_joint_controller, "-c", "/controller_manager", "--stopped"],
+        arguments=[
+            initial_joint_controller,
+            "-c",
+            "/controller_manager",
+            "--stopped",
+            "--controller-manager-timeout",
+            "120",
+            "--service-call-timeout",
+            "60",
+            "--switch-timeout",
+            "60",
+        ],
+    )
+
+    gripper_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "gripper_controller",
+            "-c",
+            "/controller_manager",
+            "--controller-manager-timeout",
+            "120",
+            "--service-call-timeout",
+            "60",
+            "--switch-timeout",
+            "60",
+        ],
+    )
+
+    # Configure the trajectory controller only after joint states are ready.
+    # Starting both spawners concurrently can overload the Gazebo controller
+    # manager during initialization and leave both controllers unconfigured.
+    delay_started_controller = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=joint_state_broadcaster_spawner,
+            on_exit=[initial_joint_controller_spawner_started],
+        ),
+        condition=IfCondition(start_joint_controller),
+    )
+    delay_stopped_controller = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=joint_state_broadcaster_spawner,
+            on_exit=[initial_joint_controller_spawner_stopped],
+        ),
+        condition=UnlessCondition(start_joint_controller),
+    )
+
+    # Configure the gripper only after the arm controller. Serializing the
+    # spawners avoids overloading controller_manager while Gazebo starts.
+    delay_gripper_after_started_controller = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=initial_joint_controller_spawner_started,
+            on_exit=[gripper_controller_spawner],
+        ),
+        condition=IfCondition(start_joint_controller),
+    )
+    delay_gripper_after_stopped_controller = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=initial_joint_controller_spawner_stopped,
+            on_exit=[gripper_controller_spawner],
+        ),
         condition=UnlessCondition(start_joint_controller),
     )
 
@@ -166,6 +250,14 @@ def launch_setup(context, *args, **kwargs):
             robot_description_content,
             "-name",
             "ur",
+            "-x",
+            robot_x,
+            "-y",
+            robot_y,
+            "-z",
+            robot_z,
+            "-Y",
+            robot_yaw,
             "-allow_renaming",
             "true",
         ],
@@ -174,7 +266,7 @@ def launch_setup(context, *args, **kwargs):
         PythonLaunchDescriptionSource(
             [FindPackageShare("ros_gz_sim"), "/launch/gz_sim.launch.py"]
         ),
-        launch_arguments={"gz_args": [" -r -v 4 ", world_file]}.items(),
+        launch_arguments={"gz_args": [" -r -v 4 ", world_file], "on_exit_shutdown": "true"}.items(),
         condition=IfCondition(gazebo_gui),
     )
 
@@ -182,7 +274,7 @@ def launch_setup(context, *args, **kwargs):
         PythonLaunchDescriptionSource(
             [FindPackageShare("ros_gz_sim"), "/launch/gz_sim.launch.py"]
         ),
-        launch_arguments={"gz_args": [" -s -r -v 4 ", world_file]}.items(),
+        launch_arguments={"gz_args": [" -s -r -v 4 ", world_file], "on_exit_shutdown": "true"}.items(),
         condition=UnlessCondition(gazebo_gui),
     )
 
@@ -193,6 +285,16 @@ def launch_setup(context, *args, **kwargs):
         arguments=[
             "/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock",
         ],
+        # Keep Gazebo's clock separate. The monotonic relay below prevents
+        # occasional out-of-order samples from resetting RViz and MoveIt.
+        remappings=[("/clock", "/raw_clock")],
+        output="screen",
+    )
+
+    monotonic_clock = Node(
+        package="ur_simulation_gz",
+        executable="monotonic_clock.py",
+        name="monotonic_clock",
         output="screen",
     )
 
@@ -200,12 +302,15 @@ def launch_setup(context, *args, **kwargs):
         robot_state_publisher_node,
         joint_state_broadcaster_spawner,
         delay_rviz_after_joint_state_broadcaster_spawner,
-        initial_joint_controller_spawner_stopped,
-        initial_joint_controller_spawner_started,
+        delay_started_controller,
+        delay_stopped_controller,
+        delay_gripper_after_started_controller,
+        delay_gripper_after_stopped_controller,
         gz_spawn_entity,
         gz_launch_description_with_gui,
         gz_launch_description_without_gui,
         gz_sim_bridge,
+        monotonic_clock,
     ]
 
     return nodes_to_start
@@ -325,6 +430,28 @@ def generate_launch_description():
             "world_file",
             default_value="empty.sdf",
             description="Gazebo world file (absolute path or filename from the gazebosim worlds collection) containing a custom world.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_x", default_value="0.0", description="Initial robot X position [m]."
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_y", default_value="0.0", description="Initial robot Y position [m]."
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_z", default_value="0.0", description="Initial robot Z position [m]."
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_yaw",
+            default_value="0.0",
+            description="Initial robot yaw angle [rad].",
         )
     )
 
