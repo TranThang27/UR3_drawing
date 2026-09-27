@@ -3,6 +3,7 @@ from __future__ import annotations
 import atexit
 import json
 import math
+import os
 import subprocess
 import time
 from typing import Dict, Optional, Tuple
@@ -43,6 +44,22 @@ CUBE_COLORS = {
     "yellow_cube": (1.0, 0.85, 0.02, 1.0),
     "blue_cube": (0.02, 0.15, 1.0, 1.0),
 }
+
+
+def _motion_speed_scale() -> float:
+    raw_value = os.environ.get("HRI_SPEED_SCALE", "2.0")
+    try:
+        value = float(raw_value)
+    except ValueError as exc:
+        raise RuntimeError("HRI_SPEED_SCALE must be a number from 0.5 to 3.0") from exc
+    if not 0.5 <= value <= 3.0:
+        raise RuntimeError("HRI_SPEED_SCALE must be between 0.5 and 3.0")
+    return value
+
+
+SPEED_SCALE = _motion_speed_scale()
+MOVE_GROUP_SCALE = min(0.2 * SPEED_SCALE, 0.6)
+TRAJECTORY_TIME_SCALE = 5.0 / SPEED_SCALE
 
 
 def _cube_color(name: str) -> ObjectColor:
@@ -113,6 +130,7 @@ class RobotActions(Node):
             JointState, "/joint_states", self._on_joint_state, 10
         )
         self.held_object: Optional[str] = None
+        self.get_logger().info(f"Motion speed: {SPEED_SCALE:.1f}x")
 
     def _on_joint_state(self, message: JointState) -> None:
         self._joint_positions.update(zip(message.name, message.position))
@@ -169,8 +187,8 @@ class RobotActions(Node):
         goal.request.group_name = "ur_manipulator"
         goal.request.num_planning_attempts = 10
         goal.request.allowed_planning_time = 8.0
-        goal.request.max_velocity_scaling_factor = 0.20
-        goal.request.max_acceleration_scaling_factor = 0.20
+        goal.request.max_velocity_scaling_factor = MOVE_GROUP_SCALE
+        goal.request.max_acceleration_scaling_factor = MOVE_GROUP_SCALE
         goal.request.start_state.is_diff = True
         goal.request.goal_constraints = [constraints]
         goal.planning_options.plan_only = False
@@ -282,15 +300,21 @@ class RobotActions(Node):
         if max(travel) > 1.5:
             raise RuntimeError("Cartesian segment would rotate a joint more than 1.5 rad")
         for point in points:
-            nanos = (
+            source_nanos = (
                 point.time_from_start.sec * 10**9
                 + point.time_from_start.nanosec
-            ) * 5
+            )
+            nanos = int(source_nanos * TRAJECTORY_TIME_SCALE)
             point.time_from_start = Duration(
                 sec=nanos // 10**9, nanosec=nanos % 10**9
             )
-            point.velocities = [v / 5.0 for v in point.velocities]
-            point.accelerations = [a / 25.0 for a in point.accelerations]
+            point.velocities = [
+                value / TRAJECTORY_TIME_SCALE for value in point.velocities
+            ]
+            point.accelerations = [
+                value / TRAJECTORY_TIME_SCALE**2
+                for value in point.accelerations
+            ]
         if not self._execute.wait_for_server(timeout_sec=10.0):
             raise RuntimeError("MoveIt trajectory execution server is unavailable")
         self.get_logger().info(

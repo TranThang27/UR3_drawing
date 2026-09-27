@@ -19,6 +19,9 @@ cd ~/workspaces/UR3_drawing/llm_HRI
 python3 run_demo.py
 ```
 
+The default motion speed is 2x. Use `HRI_SPEED_SCALE=3 python3 run_demo.py`
+for the maximum configured speed.
+
 Run one English command while the simulation is available:
 
 ```bash
