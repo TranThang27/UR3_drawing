@@ -10,8 +10,15 @@ option(
   OFF
 )
 
-install(DIRECTORY config launch
+install(DIRECTORY config launch urdf worlds
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/add_pick_place_scene.py
+  scripts/monotonic_clock.py
+  scripts/gripper_servo.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

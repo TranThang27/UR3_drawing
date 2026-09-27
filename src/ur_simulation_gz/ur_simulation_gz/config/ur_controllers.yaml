@@ -14,6 +14,9 @@ controller_manager:
     joint_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    gripper_controller:
+      type: effort_controllers/JointGroupEffortController
+
     scaled_joint_trajectory_controller:
       type: ur_controllers/ScaledJointTrajectoryController
 
@@ -104,3 +107,13 @@ forward_position_controller:
       - wrist_1_joint
       - wrist_2_joint
       - wrist_3_joint
+
+gripper_controller:
+  ros__parameters:
+    joints:
+      - robotiq_85_left_knuckle_joint
+      - robotiq_85_right_knuckle_joint
+      - robotiq_85_left_inner_knuckle_joint
+      - robotiq_85_right_inner_knuckle_joint
+      - robotiq_85_left_finger_tip_joint
+      - robotiq_85_right_finger_tip_joint
