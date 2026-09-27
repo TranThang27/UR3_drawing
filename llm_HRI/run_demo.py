@@ -1,4 +1,5 @@
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -11,6 +12,64 @@ SHUTDOWN_STAGES = (
     (signal.SIGTERM, 5),
     (signal.SIGKILL, 2),
 )
+
+
+def package_available(environment):
+    try:
+        result = subprocess.run(
+            ["ros2", "pkg", "prefix", "ur_simulation_gz"],
+            env=environment,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        return False
+    return result.returncode == 0
+
+
+def setup_candidates():
+    script_dir = Path(__file__).resolve().parent
+    configured = os.environ.get("UR3_GZ_SETUP")
+    candidates = [
+        Path(configured).expanduser() if configured else None,
+        script_dir.parent / "install" / "setup.bash",
+        script_dir.parent / "ur3_gz" / "install" / "setup.bash",
+    ]
+    return [path for path in candidates if path and path.is_file()]
+
+
+def source_environment(setup_file):
+    command = (
+        "source /opt/ros/humble/setup.bash && "
+        f"source {shlex.quote(str(setup_file))} && env -0"
+    )
+    result = subprocess.run(
+        ["bash", "-c", command],
+        check=True,
+        capture_output=True,
+    )
+    environment = {}
+    for item in result.stdout.split(b"\0"):
+        if b"=" in item:
+            key, value = item.split(b"=", 1)
+            environment[os.fsdecode(key)] = os.fsdecode(value)
+    return environment
+
+
+def ros_environment():
+    environment = dict(os.environ)
+    if package_available(environment):
+        return environment
+    for setup_file in setup_candidates():
+        environment = source_environment(setup_file)
+        if package_available(environment):
+            print(f"Using ROS workspace: {setup_file}", flush=True)
+            return environment
+    raise RuntimeError(
+        "Package ur_simulation_gz is unavailable. Build the workspace with "
+        "'colcon build --symlink-install', or set UR3_GZ_SETUP to its "
+        "install/setup.bash file."
+    )
 
 
 def stop(process):
@@ -85,6 +144,8 @@ def main():
 
     signal.signal(signal.SIGTERM, interrupt)
     try:
+        environment = ros_environment()
+        os.environ.update(environment)
         simulation = subprocess.Popen(
             [
                 "ros2",
@@ -92,11 +153,13 @@ def main():
                 "ur_simulation_gz",
                 "pick_place_moveit.launch.py",
             ],
+            env=environment,
             start_new_session=True,
         )
         wait_ready(simulation)
         demo = subprocess.Popen(
             [sys.executable, str(Path(__file__).with_name("main.py")), "--demo"],
+            env=environment,
             start_new_session=True,
         )
         while demo.poll() is None:
