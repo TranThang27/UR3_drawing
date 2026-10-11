@@ -1,0 +1,18 @@
+# Generated dependencies and demo evidence
+.runtime/
+reports/
+
+# Python and editor caches
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.vscode/
+
+# Map backups and intermediate exports
+maps/backups/
+maps/depot_smoke.*
+*.log
+*.pid
+*.partial
