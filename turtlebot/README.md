@@ -11,7 +11,8 @@ sudo apt install ros-humble-turtlebot4-simulator ros-humble-irobot-create-nodes 
   ros-humble-turtlebot4-navigation ros-humble-turtlebot4-viz \
   ros-humble-slam-toolbox ros-humble-nav2-bringup \
   ros-humble-nav2-map-server ros-humble-teleop-twist-keyboard ros-humble-rviz2 \
-  python3-apt python3-pil python3-numpy python3-yaml ffmpeg wmctrl
+  python3-apt python3-pil python3-numpy python3-yaml python3-venv ffmpeg wmctrl \
+  ros-humble-cv-bridge ros-humble-rmw-cyclonedds-cpp
 ./run.sh setup
 ./run.sh doctor
 ```
@@ -90,3 +91,41 @@ python3 scripts/finish_video_demo.py reports/video_demo_new
 ```
 
 Video và kết quả lưu trong thư mục output.
+
+## Nav2 bằng code + YOLO
+
+Sau khi cài đặt, chạy:
+
+```bash
+./run.sh setup-yolo
+./run.sh yolo-demo --output reports/nav_yolo_demo_new
+python3 scripts/finish_yolo_demo.py reports/nav_yolo_demo_new
+```
+
+Dùng map cũ; tự localization, gửi 3 goal trong `config/goals.yaml`, chạy YOLO
+và quay video. Output phải chưa tồn tại. Video: `turtlebot4_nav_yolo.mp4`.
+
+Chạy riêng khi simulation/Nav2 đã sẵn sàng và AMCL đã khởi tạo:
+
+```bash
+./run.sh yolo --display
+# Terminal khác:
+./run.sh goals --goals-file config/goals.yaml --dwell 6 --timeout 360
+```
+
+Xem tọa độ và ảnh nhận diện:
+
+```bash
+source environment.sh
+ros2 topic echo /clicked_point
+ros2 topic echo /amcl_pose
+ros2 topic echo /yolo/detections
+```
+
+RViz: **Publish Point** để lấy x/y; yaw tính bằng radian.
+Ảnh đã vẽ bounding box: `/yolo/annotated_image`.
+
+## Báo cáo
+
+LaTeX nằm trong `report/` (`pdflatex report.tex`, cần `t5enc.def` kèm theo cho tiếng Việt); bản PDF: `report/report.pdf`.
+Video demo: https://drive.google.com/drive/folders/1LF-GkSyY50TnkUzGGbq_RCvAMGTMZOS7?hl=vi

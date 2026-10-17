@@ -25,6 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--initial-pose', type=float, nargs=3, required=True,
                         help='Approximate known x y yaw in the saved map, after undock')
+    parser.add_argument('--stationary', action='store_true', help='Verify initial pose without driving a test route')
     parser.add_argument('--map', type=Path, default=ROOT/'maps/map.yaml')
     parser.add_argument('--report', type=Path, default=ROOT/'reports/part3/localization_check.json')
     args = parser.parse_args()
@@ -106,7 +107,7 @@ def main():
                                              rclpy.time.Time()).transform.rotation
         node.laser_yaw = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
         capture('after_initial_estimate')
-        for label, target in [('west',(-1.6,0)), ('south_west',(-1.6,-1.6))]:
+        for label, target in ([] if args.stationary else [('west',(-1.6,0)), ('south_west',(-1.6,-1.6))]):
             node.go(target)
             capture(label)
         report['passed'] = all(s['passed'] for s in report['samples']) and not node.bump_messages

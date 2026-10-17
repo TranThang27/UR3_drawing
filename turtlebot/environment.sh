@@ -12,9 +12,10 @@ if [[ -f "$TB4_ROOT/.runtime/manifest.json" ]]; then
   export QML2_IMPORT_PATH="$TB4_RUNTIME/usr/lib/x86_64-linux-gnu/qt5/qml:${QML2_IMPORT_PATH:-}"
 fi
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-42}"
-export ROS_LOCALHOST_ONLY=1
-# This laptop's Intel renderer produces saturated GPU LiDAR readings. Use the
-# installed NVIDIA driver through PRIME offload, without changing system GPU settings.
+export ROS_LOCALHOST_ONLY="${ROS_LOCALHOST_ONLY:-0}"
+export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
+export CYCLONEDDS_URI="${CYCLONEDDS_URI:-file://$TB4_ROOT/config/cyclonedds_local.xml}"
+# Prefer NVIDIA when its driver is usable; the Ogre2 sensor backend also runs on Intel.
 if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
   export __NV_PRIME_RENDER_OFFLOAD=1
   export __GLX_VENDOR_LIBRARY_NAME=nvidia

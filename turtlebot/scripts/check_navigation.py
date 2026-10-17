@@ -22,15 +22,27 @@ from tf2_ros import Buffer, TransformListener, TransformException
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--goal', type=float, nargs=3, action='append', required=True,
+    targets = parser.add_mutually_exclusive_group(required=True)
+    targets.add_argument('--goals-file', type=Path, help='YAML map-frame goals, executed in listed order')
+    targets.add_argument('--goal', type=float, nargs=3, action='append',
                         metavar=('X', 'Y', 'YAW'), help='Pose in map, yaw in radians; repeat for each goal')
     parser.add_argument('--initial-pose', type=float, nargs=3, metavar=('X', 'Y', 'YAW'),
                         help='Only supply when this pose is known in your saved map')
+    parser.add_argument('--dwell', type=float, default=0, help='Pause at each successful goal, seconds')
     parser.add_argument('--timeout', type=float, default=120, help='Wall seconds per goal')
     parser.add_argument('--report', type=Path, default=Path('reports/navigation_goals.json'))
     args = parser.parse_args()
+    if args.goals_file:
+        import yaml
+        data = yaml.safe_load(args.goals_file.read_text())
+        if data.get('frame_id') != 'map' or len(data.get('goals', [])) < 3:
+            parser.error('Goal file must contain at least three goals in map frame.')
+        args.goal = [item['pose'] for item in data['goals']]
+    if not all(len(goal) == 3 for goal in args.goal):
+        parser.error('Each goal must have x, y, yaw.')
     values = [v for goal in args.goal for v in goal] + (args.initial_pose or [])
-    if not all(math.isfinite(v) for v in values) or not math.isfinite(args.timeout) or args.timeout <= 0:
+    if (not all(math.isfinite(v) for v in values) or not math.isfinite(args.timeout) or args.timeout <= 0
+            or not math.isfinite(args.dwell) or args.dwell < 0):
         parser.error('Coordinates must be finite; timeout must be positive.')
     rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
     node = Node('tb4_navigation_check')
@@ -67,9 +79,19 @@ def main():
         return bool(condition())
 
     report = {'goals': [], 'observations': observations, 'passed': False,
+              'goal_source': '/navigate_to_pose ROS 2 ActionClient',
+              'frame_id': 'map', 'manual_velocity_commands': 0,
               'note': 'Bumper data detects reported contacts; also inspect Gazebo and RViz2. '
                       'Final map TF alone does not establish ground-truth localization accuracy.'}
     handle = None
+
+    def save_progress():
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        progress = args.report.with_name(args.report.stem + '_progress.json')
+        temp = progress.with_suffix('.tmp')
+        temp.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n')
+        temp.replace(progress)
+
     try:
         if args.initial_pose:
             if not wait(lambda: initial.get_subscription_count() > 0, 30):
@@ -108,6 +130,7 @@ def main():
             before = observations.copy()
             entry = {'goal': [x, y, yaw], 'succeeded': False}
             report['goals'].append(entry)
+            save_progress()
             sent = client.send_goal_async(goal)
             if not wait(sent.done, 15):
                 raise RuntimeError('Gửi goal hết thời gian.')
@@ -122,6 +145,10 @@ def main():
             handle = None
             pose = buffer.lookup_transform('map', 'base_link', rclpy.time.Time()).transform
             entry['final_xy'] = [pose.translation.x, pose.translation.y]
+            q = pose.rotation
+            final_yaw = math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
+            entry['final_yaw'] = final_yaw
+            entry['yaw_error_rad'] = abs(math.atan2(math.sin(final_yaw-yaw), math.cos(final_yaw-yaw)))
             entry['position_error_m'] = math.hypot(x - pose.translation.x, y - pose.translation.y)
             entry['hazard_messages'] = observations['hazard_messages'] - before['hazard_messages']
             entry['bump_messages'] = observations['bump_messages'] - before['bump_messages']
@@ -130,10 +157,14 @@ def main():
                                   and entry['position_error_m'] < 0.35
                                   and entry['hazard_messages'] > 0
                                   and entry['bump_messages'] == 0 and entry['plan_messages'] > 0)
+            save_progress()
             print(json.dumps(entry, ensure_ascii=False), flush=True)
             if not entry['succeeded']:
                 raise RuntimeError('Goal chưa đạt kiểm tra; xem report.')
+            if args.dwell:
+                wait(lambda: False, args.dwell)
         report['passed'] = True
+        save_progress()
     except (RuntimeError, TransformException, KeyboardInterrupt) as error:
         report['error'] = str(error) or 'Interrupted'
         print(report['error'], flush=True)

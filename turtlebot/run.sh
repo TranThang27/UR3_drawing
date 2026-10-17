@@ -21,6 +21,15 @@ case "$COMMAND" in
   setup)
     exec /usr/bin/python3 "$ROOT/scripts/setup_local.py"
     ;;
+  setup-yolo)
+    exec /usr/bin/python3 "$ROOT/scripts/setup_yolo.py"
+    ;;
+  yolo)
+    exec "$ROOT/.runtime/yolo-venv/bin/python" "$ROOT/scripts/yolo_camera.py" "$@"
+    ;;
+  yolo-demo)
+    exec /usr/bin/python3 "$ROOT/scripts/run_yolo_demo.py" "$@"
+    ;;
   sim)
     require_pkg turtlebot4_ignition_bringup
     exec ros2 launch "$ROOT/launch/simulation.launch.py" "$@"
@@ -92,7 +101,7 @@ case "$COMMAND" in
     ;;
   doctor)
     failed=0
-    for pkg in turtlebot4_ignition_bringup irobot_create_nodes turtlebot4_navigation slam_toolbox nav2_bringup nav2_map_server rviz2 teleop_twist_keyboard; do
+    for pkg in turtlebot4_ignition_bringup irobot_create_nodes turtlebot4_navigation slam_toolbox nav2_bringup nav2_map_server rviz2 teleop_twist_keyboard rmw_cyclonedds_cpp cv_bridge; do
       if ros2 pkg prefix "$pkg" >/dev/null 2>&1; then
         echo "OK      $pkg"
       else
@@ -105,7 +114,7 @@ case "$COMMAND" in
     exit "$failed"
     ;;
   help|-h|--help)
-    echo 'Usage: ./run.sh {setup|doctor|demo|mapping|auto-map|navigation|video-demo|sim|check|hz|undock|remove-dock|motion|teleop|slam|save|localize|nav2|nav|goals}'
+    echo 'Usage: ./run.sh {setup|setup-yolo|doctor|yolo|yolo-demo|demo|mapping|auto-map|navigation|video-demo|sim|check|hz|undock|remove-dock|motion|teleop|slam|save|localize|nav2|nav|goals}'
     echo 'hz: /scan or /odom (Ctrl+C to finish)'
     echo 'navigation: [--map maps/map.yaml] [world:=simple_square]'
     echo 'sim: world:=simple_square model:=standard rviz:=true (also world:=depot)'

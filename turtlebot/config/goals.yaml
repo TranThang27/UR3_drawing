@@ -1,0 +1,9 @@
+frame_id: map
+# Positions are free cells in the saved simple_square map; yaw is in radians.
+goals:
+  - name: Goal 1 - southeast
+    pose: [1.8, -1.8, 1.4]
+  - name: Goal 2 - southwest
+    pose: [-1.8, -1.8, 1.8]
+  - name: Goal 3 - northwest
+    pose: [-1.8, 2.0, 0.12]

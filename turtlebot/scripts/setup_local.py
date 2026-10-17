@@ -19,7 +19,8 @@ PACKAGES = [
     'ros-humble-turtlebot4-simulator', 'ros-humble-irobot-create-nodes',
     'ros-humble-turtlebot4-navigation', 'ros-humble-turtlebot4-viz',
     'ros-humble-slam-toolbox', 'ros-humble-nav2-bringup',
-    'ros-humble-irobot-create-description',
+    'ros-humble-irobot-create-description', 'ros-humble-cv-bridge',
+    'ros-humble-rmw-cyclonedds-cpp',
 ]
 
 
