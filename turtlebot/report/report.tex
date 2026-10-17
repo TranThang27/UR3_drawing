@@ -1,55 +1,132 @@
-\documentclass[11pt,a4paper]{article}
-\usepackage[top=2.2cm,bottom=2.2cm,left=2.5cm,right=2.3cm]{geometry}
+\documentclass[a4paper,12pt]{article}
+
+% --- CẤU HÌNH TIẾNG VIỆT (CHUẨN CHO PDFLATEX) ---
 \usepackage[utf8]{inputenc}
 \usepackage[T5]{fontenc}
 \usepackage{lmodern}
-\usepackage{graphicx,float,booktabs,array,xcolor,listings,caption,subcaption,fancyhdr,tikz,enumitem,tcolorbox}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
-\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black]{hyperref}
-\setlength{\parskip}{3pt}\setlength{\textfloatsep}{8pt}\setlength{\parindent}{0pt}
-\linespread{1.03}
+\usepackage[vietnamese]{babel}
+
+% --- CÁC GÓI CƠ BẢN ---
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
+
+% --- CẤU HÌNH HIỂN THỊ CODE (LISTINGS) ---
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\scriptsize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{black},
+    language=Python
+}
+\lstset{style=mystyle}
+
+\renewcommand{\lstlistlistingname}{Danh mục đoạn mã}
+\renewcommand{\lstlistingname}{Đoạn mã}
+
+\setlength{\parskip}{3mm}
+\setlength{\textfloatsep}{8pt}
 \captionsetup{font=small,labelfont=bf}
-\pagestyle{fancy}\fancyhf{}
-\fancyhead[L]{\small Báo cáo thực hành -- TurtleBot 4: Localization, Nav2 và YOLO}
-\fancyfoot[C]{\thepage}
-\definecolor{codebg}{gray}{0.96}
-\lstset{basicstyle=\ttfamily\scriptsize,backgroundcolor=\color{codebg},frame=single,rulecolor=\color{black!25},
-  breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,
-  keywordstyle=\color{blue!60!black}\bfseries,commentstyle=\color{green!40!black}\itshape,
-  stringstyle=\color{red!55!black},language=Python,numbers=left,numberstyle=\tiny\color{gray},xleftmargin=1.6em}
 \newcommand{\rospkg}[1]{\texttt{#1}}
 \newcommand{\figw}[2]{\includegraphics[width=#1\linewidth]{figures/#2}}
 
+% Header & Footer
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\setlength{\headheight}{14.5pt}
+\fancyhf{}
+\lhead{\small \textit{Báo cáo TurtleBot 4 - Localization - Nav2 - YOLO}}
+\rhead{\small Trần Việt Thắng - 23020773}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+
+% hyperref nạp sau cùng
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=blue,
+    citecolor=black,
+}
+
+% --- BẮT ĐẦU TÀI LIỆU ---
 \begin{document}
 
-%================== TRANG BÌA ==================
+% --- TRANG BÌA ---
 \begin{titlepage}
-\thispagestyle{empty}
-\centering
-{\large\bfseries TRƯỜNG / KHOA .......................................\par}
-\vspace{0.6cm}
-{\large Môn học: Robot tự hành / Lập trình ROS 2\par}
-\vspace{1.6cm}
-{\huge\bfseries BÁO CÁO BÀI THỰC HÀNH\par}
-\vspace{0.6cm}
-{\Large Định vị (AMCL), điều hướng tự động bằng Nav2\\ và nhận diện vật thể bằng YOLO\\ trên TurtleBot 4 (Gazebo)\par}
-\vspace{1cm}
-\includegraphics[width=0.7\linewidth]{figures/overview_load.jpg}\par
-\vspace{1cm}
-\begin{tabular}{rl}
-Sinh viên thực hiện: & Trần Thắng \\
-Email: & thangtran2792005@gmail.com \\
-Nền tảng: & Ubuntu 22.04, ROS 2 Humble, Ignition Gazebo \\
-Ngày hoàn thành: & 14/10/2026 \\
-\end{tabular}
-\vfill
-\begin{tabular}{rl}
-\textbf{Video demo:} & \href{https://drive.google.com/drive/folders/1LF-GkSyY50TnkUzGGbq_RCvAMGTMZOS7?hl=vi}{Google Drive} \\
-\textbf{GitHub:} & \href{https://github.com/TranThang27/UR3_drawing/tree/turtlebot/turtlebot}{github.com/TranThang27/UR3\_drawing (nhánh \texttt{turtlebot})} \\
-\end{tabular}
+\begin{tikzpicture}[remember picture, overlay]
+  \draw[line width=3pt]
+    ([xshift=2cm,yshift=-2cm]current page.north west) rectangle
+    ([xshift=-2cm,yshift=2cm]current page.south east);
+\end{tikzpicture}
+    \begin{center}
+        \centering
+            \vspace*{-1cm}
+            {\scshape\Large ĐẠI HỌC QUỐC GIA HÀ NỘI
+            \\ TRƯỜNG ĐẠI HỌC CÔNG NGHỆ
+            \\[0.5cm]}
+
+            \IfFileExists{UET.png}{%
+                \includegraphics[width=4.5cm]{UET.png}%
+            }{%
+                \fbox{\parbox[c][2.0cm][c]{4.35cm}{\centering\small \textbf{LOGO UET}\\(Thêm ảnh UET.png)}}%
+            }
+            \\[0.8cm]
+
+            {\Large \textbf{BÁO CÁO THỰC HÀNH TUẦN}
+            \\[0.3cm]}
+
+            \vspace{0.5cm}
+            {\LARGE \textbf{ĐỊNH VỊ, ĐIỀU HƯỚNG TỰ ĐỘNG BẰNG NAV2 VÀ NHẬN DIỆN VẬT THỂ BẰNG YOLO CHO TURTLEBOT 4}} \\[1.5cm]
+
+            \begin{table}[H]
+                \centering
+                \large
+                \begin{tabular}{ll}
+                    \textbf{Giảng viên phụ trách:} & PGS.TS Hoàng Văn Xiêm \\
+                                                   & KS Nguyễn Quốc Bảo \\ [1cm]
+                    \textbf{Sinh viên thực hiện:}  & Trần Việt Thắng - 23020773 \\
+                \end{tabular}
+            \end{table}
+    \vfill
+    \textbf{Hà Nội, 2026}
+    \end{center}
 \end{titlepage}
 
-\pagenumbering{arabic}
+\newpage
 \tableofcontents
 \newpage
 
